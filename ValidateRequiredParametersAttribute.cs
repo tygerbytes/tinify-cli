@@ -23,6 +23,14 @@ namespace TinifyConsole
             {
                 return new ValidationResult("missing --file-pattern");
             }
+
+            if (options.Resize)
+            {
+                if (options.Width == 0 || options.Height == 0)
+                {
+                    return new ValidationResult("--resize requires --width and --height");
+                }
+            }
         
             return ValidationResult.Success;
         }

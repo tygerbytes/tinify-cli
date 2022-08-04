@@ -38,42 +38,42 @@ namespace TinifyConsole
         [Option(Description = "Tinify API Key")]
         public string ApiKey { get; }
         
+        [Option(Description = "Reduce the file size of the image")]
+        public bool Optimize { get; }
+        
+        [Option(Description = "Resize the image")]
+        public bool Resize { get; }
+        
+        [Option(Description = "New width of image (works with --resize)")]
+        public int Width { get; }
+        
+        [Option(Description = "New height of image (works with --resize)")]
+        public int Height { get; }
+        
         [Option(Description = "The search string to match against the names of files in the local directory")]
         public string FilePattern { get; }
+        
 
         public async Task<int> RunAsync(CommandLineApplication app, CancellationToken cancellationToken = default)
         {
-            Tinify.Key = ApiKey;
-            
-            const string processedDirName = "processed";
-            if (!Directory.Exists(processedDirName))
-            {
-                Directory.CreateDirectory(processedDirName);
-            }
+            var tinify = new TinifyService(ApiKey);
             
             var files = Directory.EnumerateFiles("./", FilePattern, SearchOption.TopDirectoryOnly);
 
-            foreach (string path in files)
+            foreach (var path in files)
             {
-                if (
-                    !
-                    (path.EndsWith(".png")
-                    || path.EndsWith(".jpg")
-                    || path.EndsWith(".webp"))
-                    )
-                {
-                    // Doesn't appear to be an image file
-                    continue;
-                }
-
                 var fileName = Path.GetFileName(path);
                 
-                Console.WriteLine($"Uploading '{fileName}'");
+                if (Resize)
+                {
+                    await tinify.Resize(width: Width, height: Height, fileName: fileName);
+                }
+                else 
+                {
+                    // Default to optimizing the image
+                    await tinify.Optimize(fileName);
+                }
                 
-                var source = Tinify.FromFile(fileName);
-            
-                Console.WriteLine($"Downloading compressed file to '{processedDirName}/{fileName}'");
-                await source.ToFile($"{processedDirName}/{fileName}"); 
             }
 
             await Task.CompletedTask;
