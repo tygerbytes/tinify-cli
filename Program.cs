@@ -58,25 +58,36 @@ namespace TinifyConsole
         {
             var tinify = new TinifyService(ApiKey);
             
-            var files = Directory.EnumerateFiles("./", FilePattern, SearchOption.TopDirectoryOnly);
+            var paths = Directory.EnumerateFiles("./", FilePattern, SearchOption.TopDirectoryOnly).ToArray();
 
-            foreach (var path in files)
+            ParallelOptions parallelOptions = new()
             {
-                var fileName = Path.GetFileName(path);
-                
-                if (Resize)
-                {
-                    await tinify.Resize(width: Width, height: Height, fileName: fileName);
-                }
-                else 
-                {
-                    // Default to optimizing the image
-                    await tinify.Optimize(fileName);
-                }
-                
-            }
+                MaxDegreeOfParallelism = 3
+            };
 
-            await Task.CompletedTask;
+            await Parallel.ForEachAsync(paths, parallelOptions, async (path, token) =>
+                {
+                    if (cancellationToken.IsCancellationRequested
+                        || token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    var fileName = Path.GetFileName(path);
+
+                    if (Resize)
+                    {
+                        await tinify.Resize(width: Width, height: Height, fileName: fileName);
+                    }
+                    else
+                    {
+                        // Default to optimizing the image
+                        await tinify.Optimize(fileName);
+                    }
+                }
+            );
+            
+            Console.WriteLine("🏁ALL DONE!");
             return 0;
         }
         

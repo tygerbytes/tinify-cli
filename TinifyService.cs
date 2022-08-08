@@ -16,23 +16,6 @@ public class TinifyService
             var source = await Tinify.FromFile(fileName);
             return source;
         });
-        // var fileName = Path.GetFileName(path);
-        //
-        // if (!IsImageFile(fileName))
-        // {
-        //     Console.WriteLine($"Not an image file: '{fileName}'");
-        //     return;
-        // }
-        //
-        // var outputDir = GetOutputDir();
-        //
-        // Console.Write($"Optimizing '{fileName}'. 🟠");
-        //         
-        // var source = Tinify.FromFile(fileName);
-        // Console.Write("\b🟡");
-        //     
-        // await source.ToFile(Path.Join(outputDir, fileName)); 
-        // Console.Write("\b🟢\n");
     }
 
     public async Task Resize(int width, int height, string fileName)
@@ -60,12 +43,20 @@ public class TinifyService
         
         var outputDir = GetOutputDir();
 
-        Console.Write($"{operationName}: '{fileName}'. 🟠");
-                
-        var source = await opFunc();
+        var message = $"{operationName}: '{fileName}'. ";
+
+        try
+        {
+            var source = await opFunc();
+            await source.ToFile(Path.Join(outputDir, fileName)); 
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"❌FAIL: {message}\n\t{e}");
+            return;
+        }
             
-        await source.ToFile(Path.Join(outputDir, fileName)); 
-        Console.Write("\b🟢\n"); 
+        Console.WriteLine($"✅DONE: {message}");
     }
     
     private static bool IsImageFile(string path)
