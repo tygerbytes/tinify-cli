@@ -41,7 +41,7 @@ namespace TinifyConsole
         [Option(Description = "Reduce the file size of the image")]
         public bool Optimize { get; }
         
-        [Option(Description = "Resize the image")]
+        [Option(Description = "Resize the image", ShortName = "s")]
         public bool Resize { get; }
         
         [Option(Description = "New width of image (works with --resize)")]
@@ -52,13 +52,24 @@ namespace TinifyConsole
         
         [Option(Description = "The search string to match against the names of files in the local directory")]
         public string FilePattern { get; }
-        
+
+        [Option(Description = "Recurse into subdirectories", ShortName = "r")]
+        public bool Recurse { get; }
+
+        [Option(Description = "Overwrite original file", ShortName = "k")]
+        public bool Overwrite { get; }
 
         public async Task<int> RunAsync(CommandLineApplication app, CancellationToken cancellationToken = default)
         {
-            var tinify = new TinifyService(ApiKey);
-            
-            var paths = Directory.EnumerateFiles("./", FilePattern, SearchOption.TopDirectoryOnly).ToArray();
+            var tinify = new TinifyService(ApiKey, Overwrite);
+
+            var searchOption = SearchOption.TopDirectoryOnly;
+            if (Recurse)
+            {
+                searchOption = SearchOption.AllDirectories;
+            }
+
+            var paths = Directory.EnumerateFiles("./", FilePattern, searchOption).ToArray();
 
             ParallelOptions parallelOptions = new()
             {
@@ -73,16 +84,14 @@ namespace TinifyConsole
                         return;
                     }
 
-                    var fileName = Path.GetFileName(path);
-
                     if (Resize)
                     {
-                        await tinify.Resize(width: Width, height: Height, fileName: fileName);
+                        await tinify.Resize(width: Width, height: Height, path: path);
                     }
                     else
                     {
                         // Default to optimizing the image
-                        await tinify.Optimize(fileName);
+                        await tinify.Optimize(path);
                     }
                 }
             );

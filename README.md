@@ -23,5 +23,5 @@ Quick and dirty way to run on a Linux or Mac:
 
 ```bash
 api_key="MY_API_KEY"
-tinify --api-key $api_key --file-pattern 'my_images_*'
+tinify --api-key $api_key --file-pattern '*.jpg' --recurse --overwrite
 ```

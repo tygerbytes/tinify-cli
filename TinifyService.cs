@@ -4,9 +4,12 @@ namespace TinifyConsole;
 
 public class TinifyService
 {
-    public TinifyService(string apiKey)
+    private readonly bool overwrite;
+
+    public TinifyService(string apiKey, bool overwrite)
     {
         Tinify.Key = apiKey;
+        this.overwrite = overwrite;
     }
 
     public async Task Optimize(string fileName)
@@ -15,14 +18,15 @@ public class TinifyService
         {
             var source = await Tinify.FromFile(fileName);
             return source;
-        });
+        },
+        overwrite: this.overwrite);
     }
 
-    public async Task Resize(int width, int height, string fileName)
+    public async Task Resize(int width, int height, string path)
     {
-        await RunOperationAsync(nameof(Resize), fileName, async () =>
+        await RunOperationAsync(nameof(Resize), path, async () =>
         {
-            var source = await Tinify.FromFile(fileName);
+            var source = await Tinify.FromFile(path);
             var resized = source.Resize(new
             {
                 method = "fit",
@@ -30,20 +34,23 @@ public class TinifyService
                 height = height
             });
             return resized;
-        });
+        },
+        overwrite: this.overwrite);
     }
 
-    private async Task RunOperationAsync(string operationName, string fileName, Func<Task<Source>> opFunc)
+    private async Task RunOperationAsync(string operationName, string path, Func<Task<Source>> opFunc, bool overwrite = false)
     {
+        var fileName = Path.GetFileName(path);
         if (!IsImageFile(fileName))
         {
-            Console.WriteLine($"Not an image file: '{fileName}'");
+            Console.WriteLine($"Not an image file: '{path}'");
             return;
         }
-        
-        var outputDir = GetOutputDir();
 
-        var message = $"{operationName}: '{fileName}'. ";
+        var dir = Path.GetDirectoryName(path);
+        var outputDir = GetOutputDir(dir, overwrite);
+
+        var message = $"{operationName}: '{path}'. ";
 
         try
         {
@@ -67,14 +74,23 @@ public class TinifyService
             || path.EndsWith(".webp");
     }
     
-    private static string GetOutputDir()
+    private static string GetOutputDir(string? relativePath = null, bool overwrite = false)
     {
-        const string processedDirName = "processed";
-        if (!Directory.Exists(processedDirName))
+        var processedDirName = "";
+        if (!overwrite)
         {
-            Directory.CreateDirectory(processedDirName);
+            processedDirName = "processed";
         }
 
-        return processedDirName;
+        relativePath ??= "./";
+
+        var processedDir = Path.Combine(relativePath, processedDirName);
+
+        if (!Directory.Exists(processedDir))
+        {
+            Directory.CreateDirectory(processedDir);
+        }
+
+        return processedDir;
     }
 }
